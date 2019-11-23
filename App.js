@@ -10,9 +10,25 @@ import {
 	TextInput,
 	Button,
 	KeyboardAvoidingView,
+	AsyncStorage,
+	TouchableOpacity,
 } from 'react-native';
 
 const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? 20 : StatusBar.currentHeight;
+
+const TODO = "@todoapp.todo";
+
+const TodoItem = (props) => {
+	let textStyle = styles.todoItem;
+	if (props.done === true) {
+		textStyle = styles.todoItemDone;
+	}
+	return (
+		<TouchableOpacity onPress={props.onTapTodoItem}>
+			<Text style={textStyle}>・{props.title}</Text>
+		</TouchableOpacity>
+	)
+}
 
 export default class App extends React.Component {
 	constructor(props) {
@@ -21,8 +37,38 @@ export default class App extends React.Component {
 			todo: [],
 			currentIndex: 0,
 			inputText: "",
+			filterText: "",
 		}
 	}
+	
+	componentDidMount() {
+		this.loadTodo();
+	};
+	
+	loadTodo = async () => {
+		try {
+			const todoString = await AsyncStorage.getItem(TODO);
+			if (todoString) {
+				const todo = JSON.parse(todoString);
+				const currentIndex = todo.length;
+				this.setState({
+					todo: todo,
+					currentIndex: currentIndex,
+				});
+			}
+		} catch (e) {
+			console.log(e);
+		}
+	};
+	
+	saveTodo = async (todo) => {
+		try {
+			const todoString = JSON.stringify(todo);
+			await AsyncStorage.setItem(TODO, todoString);
+		} catch (e) {
+			console.log(e);
+		}
+	};
 	
 	onAddItem = () => {
 		const title = this.state.inputText;
@@ -37,18 +83,47 @@ export default class App extends React.Component {
 			currentIndex: index,
 			inputText: "",
 		});
+		this.saveTodo(todo);
 	};
 	
+	onTapTodoItem = (todoItem) => {
+		const todo = this.state.todo;
+		const index = todo.indexOf(todoItem);
+		todoItem.done = !todoItem.done;
+		todo[index] = todoItem;
+		this.setState({todo: todo});
+		this.saveTodo(todo);
+	}
+	
   render() {
+		const filterText = this.state.filterText;
+		let todo = this.state.todo;
+		if (filterText !== "") {
+			todo = todo.filter(t => t.title.includes(filterText));
+		}
+		
 		return (
 			<KeyboardAvoidingView style={styles.container} behavior="padding">
 				<View style={styles.filter}>
-					<Text>Filterがここに配置されます</Text>
+					<TextInput 
+						onChangeText={(text) => this.setState({filterText: text})}
+						value={this.state.filterText}
+						style={styles.inputText}
+						placeholder="Type filter text"
+					/>
 				</View>
 				<ScrollView style={styles.todolist}>
 					<FlatList 
-						data={this.state.todo}
-						renderItem={({item}) => <Text>{item.title}</Text>}
+						data={todo}
+						extraData={this.state}
+						renderItem={({item}) => 
+							<TodoItem 
+								title={item.title}
+								done={item.done}
+								style={styles.para}
+								onTapTodoItem={() => this.onTapTodoItem(item)}
+							/>
+						}
 						keyExtractor={(item, index) => "todo_" + item.index}
 					/>
 				</ScrollView>
@@ -57,6 +132,7 @@ export default class App extends React.Component {
 						onChangeText={(text) => this.setState({inputText: text})}
 						value={this.state.inputText}
 						style={styles.inputText}
+						placeholder="Type todo text"
 					/>
 					<Button
 						onPress={this.onAddItem}
@@ -79,7 +155,10 @@ const styles = StyleSheet.create({
     // justifyContent: 'center',
   },
 	filter: {
+		marginTop: 20,
 		height: 30,
+		marginLeft: 10,
+		marginRight: 10,
 	},
 	todolist: {
 		flex: 1
@@ -92,10 +171,26 @@ const styles = StyleSheet.create({
 		marginRight: 10,
 	},
 	inputText: {
-		backgroundColor: '#ccc',
+		borderWidth: 1,
+		borderColor: '#000',
 		flex: 1,
 	},
 	inputButton: {
 		width: 100,
-	}
+	},
+	todoItem: {
+		fontSize: 20,
+		backgroundColor: "#fff",
+		marginTop: 10,
+		paddingTop: 4,
+		paddingBottom: 4,
+	},
+	todoItemDone: {
+		color: '#fff',
+		fontSize: 20,
+		backgroundColor: "#f00",
+		marginTop: 10,
+		paddingTop: 4,
+		paddingBottom: 4,
+	},
 });

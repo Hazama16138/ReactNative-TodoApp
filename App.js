@@ -76,7 +76,7 @@ export default class App extends React.Component {
 			return;
 		}
 		const index = this.state.currentIndex + 1;
-		const newTodo = {index: index, title: title, done: false};
+		const newTodo = {index: index, title: title, done: false, compDate: ''};
 		const todo = [...this.state.todo, newTodo];
 		this.setState({
 			todo: todo,
@@ -120,7 +120,6 @@ export default class App extends React.Component {
 							<TodoItem 
 								title={item.title}
 								done={item.done}
-								style={styles.para}
 								onTapTodoItem={() => this.onTapTodoItem(item)}
 							/>
 						}
